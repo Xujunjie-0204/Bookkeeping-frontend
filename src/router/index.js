@@ -5,6 +5,7 @@ import DashboardView from '@/views/DashboardView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ProductManageView from '@/views/ProductManageView.vue'
 import ProductTypeManageView from '@/views/ProductTypeManageView.vue'
+import PurchaseManageView from '@/views/PurchaseManageView.vue'
 import MenuManageView from '@/views/MenuManageView.vue'
 import RoleManageView from '@/views/RoleManageView.vue'
 
@@ -38,6 +39,11 @@ const routes = [
     path: '/product-types',
     name: 'productTypes',
     component: ProductTypeManageView
+  },
+  {
+    path: '/purchases',
+    name: 'purchases',
+    component: PurchaseManageView
   },
   {
     path: '/system/menus',

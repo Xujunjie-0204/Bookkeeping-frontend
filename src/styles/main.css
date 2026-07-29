@@ -382,6 +382,51 @@ input {
   width: 100%;
 }
 
+.purchase-filter {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) 170px auto;
+  align-items: center;
+  gap: 12px 18px;
+}
+
+.purchase-filter .el-form-item:last-child {
+  justify-self: start;
+}
+
+.purchase-filter .el-input,
+.purchase-filter .el-select {
+  width: 100%;
+}
+
+.purchase-items-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 8px 0 12px;
+}
+
+.purchase-items-head div {
+  display: grid;
+  gap: 4px;
+}
+
+.purchase-items-head span {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.purchase-remark {
+  margin-top: 18px;
+}
+
+.field-error {
+  margin-top: 4px;
+  color: #f56c6c;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .table-scroll {
   width: 100%;
   overflow-x: auto;
@@ -468,6 +513,10 @@ input {
   }
 
   .product-filter {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-filter {
     grid-template-columns: 1fr;
   }
 

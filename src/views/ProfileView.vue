@@ -21,6 +21,10 @@
             <span>商品类型</span>
           </el-menu-item>
         </el-sub-menu>
+        <el-menu-item index="/purchases">
+          <el-icon><ShoppingCart /></el-icon>
+          <span>采购进货</span>
+        </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
           <span>个人中心</span>
@@ -135,7 +139,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { CollectionTag, DataLine, Goods, Menu, Refresh, Setting, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
+import { CollectionTag, DataLine, Goods, Menu, Refresh, Setting, ShoppingCart, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
