@@ -16,6 +16,13 @@ export function getSaleSummaryApi(params) {
   })
 }
 
+export function getSaleDetailApi(id) {
+  return request({
+    url: `/api/sales/${id}`,
+    method: 'get'
+  })
+}
+
 export function getAvailableSaleStockApi(params) {
   return request({
     url: '/api/sales/available-stock',

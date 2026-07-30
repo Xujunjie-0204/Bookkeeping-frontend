@@ -80,7 +80,20 @@
               <el-table-column prop="expenseName" label="支出名称" min-width="160" show-overflow-tooltip />
               <el-table-column prop="amount" label="金额" width="110" />
               <el-table-column prop="expressCompany" label="快递公司" width="110" />
-              <el-table-column prop="relatedOrderNo" label="关联销售单" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="relatedOrderNo" label="关联销售单" min-width="160" show-overflow-tooltip>
+                <template #default="{ row }">
+                  <el-button
+                    v-if="row.relatedSaleId"
+                    class="link-button"
+                    text
+                    type="primary"
+                    @click="openSaleDetail(row)"
+                  >
+                    {{ row.relatedOrderNo || '查看销售单' }}
+                  </el-button>
+                  <span v-else>{{ row.relatedOrderNo || '-' }}</span>
+                </template>
+              </el-table-column>
               <el-table-column label="来源" width="90">
                 <template #default="{ row }"><el-tag :type="row.independentFlag === 0 ? 'success' : 'info'">{{ row.independentFlag === 0 ? '销售生成' : '手动录入' }}</el-tag></template>
               </el-table-column>
@@ -129,26 +142,105 @@
         <el-button type="primary" :loading="saving" @click="handleSubmit">保存</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="saleDetailVisible" title="销售详情" width="min(1240px, calc(100vw - 64px))" class="sale-order-dialog">
+      <div v-if="currentSale" class="sale-detail-view">
+        <div class="sale-form-sections">
+          <section class="sale-form-section">
+            <div class="sale-section-title">订单信息</div>
+            <div class="sale-detail-fields">
+              <div class="detail-field"><span>销售单号</span><strong>{{ currentSale.recordNo || '-' }}</strong></div>
+              <div class="detail-field"><span>销售平台</span><strong>{{ currentSale.platform || '-' }}</strong></div>
+              <div class="detail-field"><span>销售日期</span><strong>{{ currentSale.businessDate || '-' }}</strong></div>
+              <div class="detail-field"><span>平台订单号</span><strong>{{ currentSale.platformOrderNo || '-' }}</strong></div>
+              <div class="detail-field"><span>买家名称</span><strong>{{ currentSale.buyerName || '-' }}</strong></div>
+              <div class="detail-field"><span>买家电话</span><strong>{{ currentSale.buyerPhone || '-' }}</strong></div>
+            </div>
+          </section>
+
+          <section class="sale-form-section">
+            <div class="sale-section-title">配送状态</div>
+            <div class="sale-detail-fields">
+              <div class="detail-field"><span>收款状态</span><strong>{{ currentSale.paymentStatus === 1 ? '已收款' : '未收款' }}</strong></div>
+              <div class="detail-field"><span>发货状态</span><strong>{{ currentSale.shipmentStatus === 1 ? '已发货' : '未发货' }}</strong></div>
+              <div class="detail-field"><span>快递公司</span><strong>{{ currentSale.expressCompany || '-' }}</strong></div>
+              <div class="detail-field"><span>快递单号</span><strong>{{ currentSale.expressNo || '-' }}</strong></div>
+            </div>
+          </section>
+
+          <section class="sale-form-section sale-fee-section">
+            <div class="sale-section-title">费用设置</div>
+            <div class="sale-detail-fees">
+              <div class="detail-field"><span>无忧卖</span><strong>{{ saleFeeConfig.worryFreeSale ? '是' : '否' }}</strong></div>
+              <div class="detail-field"><span>平台费率</span><strong>{{ saleFeeConfig.platformFeeRate ? `${(Number(saleFeeConfig.platformFeeRate) * 100).toFixed(2)}%` : '-' }}</strong></div>
+              <div class="detail-field"><span>平台费用</span><strong>{{ formatMoney(currentSale.platformFee) }}</strong></div>
+              <div class="detail-field"><span>快递费</span><strong>{{ formatMoney(currentSale.expressFee) }}</strong></div>
+              <div class="detail-field"><span>包装费</span><strong>{{ formatMoney(currentSale.packageFee) }}</strong></div>
+              <div class="detail-field"><span>其它费用</span><strong>{{ formatMoney(currentSale.otherExpense) }}</strong></div>
+              <div class="detail-field"><span>退款金额</span><strong>{{ formatMoney(currentSale.refundAmount) }}</strong></div>
+              <div class="detail-field"><span>推广费</span><strong>{{ formatMoney(currentSale.promotionFee) }}</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="purchase-items-head sale-items-head">
+          <div>
+            <strong>销售明细</strong>
+            <span>从经营支出关联销售单打开，方便核对物流包装费用。</span>
+          </div>
+        </div>
+        <div class="table-scroll sale-items-table">
+          <el-table v-loading="saleDetailLoading" :data="saleItems" border>
+            <el-table-column prop="purchaseNo" label="采购单号" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="productName" label="商品名称" min-width="170" show-overflow-tooltip />
+            <el-table-column prop="deviceNo" label="设备编号" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="quantity" label="数量" width="80" />
+            <el-table-column prop="saleUnitPrice" label="销售单价" width="100" />
+            <el-table-column prop="costUnitPrice" label="成本单价" width="100" />
+            <el-table-column prop="profitAmount" label="利润(含费用)" width="120" />
+          </el-table>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="sale-dialog-footer">
+          <div class="sale-dialog-total">
+            <span>销售金额 <strong>{{ formatMoney(currentSale?.totalSaleAmount) }}</strong></span>
+            <span>成本金额 <strong>{{ formatMoney(currentSale?.totalCostAmount) }}</strong></span>
+            <span>费用合计 <strong>{{ formatMoney(saleExpenseAmount) }}</strong></span>
+            <span>利润 <strong>{{ formatMoney(currentSale?.profitAmount) }}</strong></span>
+          </div>
+          <div class="sale-dialog-actions">
+            <el-button @click="saleDetailVisible = false">关闭</el-button>
+          </div>
+        </div>
+      </template>
+    </el-dialog>
   </el-container>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Box, CollectionTag, DataLine, Goods, InfoFilled, Menu, Money, Plus, Refresh, RefreshLeft, Search, Sell, Setting, ShoppingCart, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
 import { createExpenseApi, getExpenseSummaryApi, getExpensesApi } from '@/api/expense'
+import { getSaleDetailApi, getSaleItemsApi } from '@/api/sale'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 const expenses = ref([])
+const saleItems = ref([])
+const currentSale = ref(null)
 const total = ref(0)
 const range = currentMonthRange()
 const dateRange = ref([...range])
 const loading = ref(false)
 const saving = ref(false)
 const dialogVisible = ref(false)
+const saleDetailVisible = ref(false)
+const saleDetailLoading = ref(false)
 const formRef = ref()
 
 const query = reactive({
@@ -166,6 +258,17 @@ const summary = reactive({
 })
 
 const form = reactive(defaultForm())
+
+const saleFeeConfig = computed(() => parseFeeConfig(currentSale.value?.feeConfig))
+const saleExpenseAmount = computed(() => {
+  const sale = currentSale.value || {}
+  return Number(sale.platformFee || 0)
+    + Number(sale.expressFee || 0)
+    + Number(sale.packageFee || 0)
+    + Number(sale.otherExpense || 0)
+    + Number(sale.promotionFee || 0)
+    + Number(sale.refundAmount || 0)
+})
 
 const rules = {
   expenseDate: [{ required: true, message: '请选择支出日期', trigger: 'change' }],
@@ -233,6 +336,26 @@ async function handleSubmit() {
   }
 }
 
+async function openSaleDetail(row) {
+  if (!row.relatedSaleId) {
+    return
+  }
+  saleDetailVisible.value = true
+  saleDetailLoading.value = true
+  currentSale.value = null
+  saleItems.value = []
+  try {
+    const [sale, items] = await Promise.all([
+      getSaleDetailApi(row.relatedSaleId),
+      getSaleItemsApi(row.relatedSaleId)
+    ])
+    currentSale.value = sale
+    saleItems.value = items || []
+  } finally {
+    saleDetailLoading.value = false
+  }
+}
+
 async function handleLogout() {
   await userStore.logout()
   router.replace('/login')
@@ -244,6 +367,17 @@ function defaultForm() {
 
 function formatMoney(value) {
   return Number(value || 0).toFixed(2)
+}
+
+function parseFeeConfig(value) {
+  if (!value) {
+    return {}
+  }
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    return {}
+  }
 }
 
 function today() {

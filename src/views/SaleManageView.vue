@@ -200,7 +200,7 @@
               </el-form-item>
               <el-form-item label="平台费用"><el-input-number v-model="form.platformFee" :min="0" :precision="2" :step="1" /></el-form-item>
               <el-form-item label="快递费"><el-input-number v-model="form.expressFee" :min="0" :precision="2" :step="1" /></el-form-item>
-              <el-form-item label="包装费"><el-input-number v-model="form.otherExpense" :min="0" :precision="2" :step="1" /></el-form-item>
+              <el-form-item label="包装费"><el-input-number v-model="form.packageFee" :min="0" :precision="2" :step="1" /></el-form-item>
             </div>
           </section>
         </div>
@@ -305,24 +305,87 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="saleItemsVisible" title="销售详情" width="min(980px, calc(100vw - 64px))">
-      <div v-if="currentSale" class="sale-detail-grid">
-        <div class="detail-field"><span>销售单号</span><strong>{{ currentSale.recordNo || '-' }}</strong></div>
-        <div class="detail-field"><span>平台订单号</span><strong>{{ currentSale.platformOrderNo || '-' }}</strong></div>
-        <div class="detail-field"><span>买家名称</span><strong>{{ currentSale.buyerName || '-' }}</strong></div>
-        <div class="detail-field"><span>买家电话</span><strong>{{ currentSale.buyerPhone || '-' }}</strong></div>
-        <div class="detail-field"><span>快递公司</span><strong>{{ currentSale.expressCompany || '-' }}</strong></div>
-        <div class="detail-field"><span>快递单号</span><strong>{{ currentSale.expressNo || '-' }}</strong></div>
+    <el-dialog v-model="saleItemsVisible" title="销售详情" width="min(1240px, calc(100vw - 64px))" class="sale-order-dialog">
+      <div v-if="currentSale" class="sale-detail-view">
+        <div class="sale-form-sections">
+          <section class="sale-form-section">
+            <div class="sale-section-title">订单信息</div>
+            <div class="sale-detail-fields">
+              <div class="detail-field"><span>销售单号</span><strong>{{ currentSale.recordNo || '-' }}</strong></div>
+              <div class="detail-field"><span>销售平台</span><strong>{{ currentSale.platform || '-' }}</strong></div>
+              <div class="detail-field"><span>销售日期</span><strong>{{ currentSale.businessDate || '-' }}</strong></div>
+              <div class="detail-field"><span>平台订单号</span><strong>{{ currentSale.platformOrderNo || '-' }}</strong></div>
+              <div class="detail-field"><span>买家名称</span><strong>{{ currentSale.buyerName || '-' }}</strong></div>
+              <div class="detail-field"><span>买家电话</span><strong>{{ currentSale.buyerPhone || '-' }}</strong></div>
+            </div>
+          </section>
+
+          <section class="sale-form-section">
+            <div class="sale-section-title">配送状态</div>
+            <div class="sale-detail-fields">
+              <div class="detail-field"><span>收款状态</span><strong>{{ currentSale.paymentStatus === 1 ? '已收款' : '未收款' }}</strong></div>
+              <div class="detail-field"><span>发货状态</span><strong>{{ currentSale.shipmentStatus === 1 ? '已发货' : '未发货' }}</strong></div>
+              <div class="detail-field"><span>快递公司</span><strong>{{ currentSale.expressCompany || '-' }}</strong></div>
+              <div class="detail-field"><span>快递单号</span><strong>{{ currentSale.expressNo || '-' }}</strong></div>
+            </div>
+          </section>
+
+          <section class="sale-form-section sale-fee-section">
+            <div class="sale-section-title">费用设置</div>
+            <div class="sale-detail-fees">
+              <div class="detail-field"><span>无忧卖</span><strong>{{ detailFeeConfig.worryFreeSale ? '是' : '否' }}</strong></div>
+              <div class="detail-field"><span>平台费率</span><strong>{{ detailFeeConfig.platformFeeRate ? `${(Number(detailFeeConfig.platformFeeRate) * 100).toFixed(2)}%` : '-' }}</strong></div>
+              <div class="detail-field"><span>平台费用</span><strong>{{ formatMoney(currentSale.platformFee) }}</strong></div>
+              <div class="detail-field"><span>快递费</span><strong>{{ formatMoney(currentSale.expressFee) }}</strong></div>
+              <div class="detail-field"><span>包装费</span><strong>{{ formatMoney(currentSale.packageFee) }}</strong></div>
+              <div class="detail-field"><span>其它费用</span><strong>{{ formatMoney(currentSale.otherExpense) }}</strong></div>
+              <div class="detail-field"><span>退款金额</span><strong>{{ formatMoney(currentSale.refundAmount) }}</strong></div>
+              <div class="detail-field"><span>推广费</span><strong>{{ formatMoney(currentSale.promotionFee) }}</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="purchase-items-head sale-items-head">
+          <div>
+            <strong>销售明细</strong>
+            <span>明细利润已按订单费用分摊，和销售单利润口径保持一致。</span>
+          </div>
+        </div>
+
+        <div class="table-scroll sale-items-table">
+          <el-table v-loading="saleItemsLoading" :data="saleItems" border>
+            <el-table-column prop="purchaseNo" label="采购单号" min-width="150" show-overflow-tooltip />
+            <el-table-column prop="productName" label="商品名称" min-width="170" show-overflow-tooltip />
+            <el-table-column prop="deviceNo" label="设备编号" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="conditionDesc" label="成色/瑕疵" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="quantity" label="数量" width="80" />
+            <el-table-column prop="saleUnitPrice" label="销售单价" width="100" />
+            <el-table-column prop="costUnitPrice" label="成本单价" width="100" />
+            <el-table-column prop="saleAmount" label="销售金额" width="100" />
+            <el-table-column prop="costAmount" label="成本金额" width="100" />
+            <el-table-column prop="profitAmount" label="利润(含费用)" width="120" />
+          </el-table>
+        </div>
+
+        <div class="sale-detail-remark">
+          <span>备注</span>
+          <p>{{ currentSale.remark || '-' }}</p>
+        </div>
       </div>
-      <el-table v-loading="saleItemsLoading" :data="saleItems" border>
-        <el-table-column prop="purchaseNo" label="采购单号" min-width="150" />
-        <el-table-column prop="productName" label="商品名称" min-width="160" />
-        <el-table-column prop="deviceNo" label="设备编号" min-width="130" />
-        <el-table-column prop="quantity" label="数量" width="80" />
-        <el-table-column prop="saleUnitPrice" label="销售单价" width="100" />
-        <el-table-column prop="costUnitPrice" label="成本单价" width="100" />
-        <el-table-column prop="profitAmount" label="利润" width="100" />
-      </el-table>
+
+      <template #footer>
+        <div class="sale-dialog-footer">
+          <div class="sale-dialog-total">
+            <span>销售金额 <strong>{{ formatMoney(currentSale?.totalSaleAmount) }}</strong></span>
+            <span>成本金额 <strong>{{ formatMoney(currentSale?.totalCostAmount) }}</strong></span>
+            <span>费用合计 <strong>{{ formatMoney(detailExpenseAmount) }}</strong></span>
+            <span>利润 <strong>{{ formatMoney(currentSale?.profitAmount) }}</strong></span>
+          </div>
+          <div class="sale-dialog-actions">
+            <el-button @click="saleItemsVisible = false">关闭</el-button>
+          </div>
+        </div>
+      </template>
     </el-dialog>
   </el-container>
 </template>
@@ -388,6 +451,16 @@ const formProfitAmount = computed(() => {
   const expenses = Number(form.platformFee || 0) + Number(form.expressFee || 0) + Number(form.packageFee || 0) + Number(form.promotionFee || 0) + Number(form.otherExpense || 0)
   return formSaleAmount.value - formCostAmount.value - expenses - Number(form.refundAmount || 0)
 })
+const detailPackageFee = computed(() => Number(currentSale.value?.packageFee || 0) + Number(currentSale.value?.otherExpense || 0))
+const detailExpenseAmount = computed(() => {
+  const sale = currentSale.value || {}
+  return Number(sale.platformFee || 0)
+    + Number(sale.expressFee || 0)
+    + detailPackageFee.value
+    + Number(sale.promotionFee || 0)
+    + Number(sale.refundAmount || 0)
+})
+const detailFeeConfig = computed(() => parseFeeConfig(currentSale.value?.feeConfig))
 
 watch(
   [formSaleAmount, () => form.worryFreeSale],
@@ -571,6 +644,7 @@ async function handleSubmit() {
     } else {
       await createSaleApi({
         ...form,
+        platformFeeRate: currentPlatformFeeRate(),
         items: form.items.map((item) => ({
           batchId: item.batchId,
           quantity: item.quantity,
@@ -633,6 +707,21 @@ function lineSaleAmount(row) {
 function calculatePlatformFee() {
   const rate = form.worryFreeSale ? 0.026 : 0.016
   return Number((formSaleAmount.value * rate).toFixed(2))
+}
+
+function currentPlatformFeeRate() {
+  return form.worryFreeSale ? 0.026 : 0.016
+}
+
+function parseFeeConfig(value) {
+  if (!value) {
+    return {}
+  }
+  try {
+    return JSON.parse(value)
+  } catch (error) {
+    return {}
+  }
 }
 
 function flattenTypeIds(node) {
