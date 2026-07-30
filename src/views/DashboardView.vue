@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-container class="app-shell">
     <el-aside width="220px" class="sidebar">
       <div class="sidebar-title">经营记账</div>
@@ -24,6 +24,12 @@
         <el-menu-item index="/purchases">
           <el-icon><ShoppingCart /></el-icon>
           <span>采购进货</span>
+        </el-menu-item>
+        <el-menu-item index="/sales"><el-icon><Sell /></el-icon><span>销售管理</span></el-menu-item>
+        <el-menu-item index="/expenses"><el-icon><Money /></el-icon><span>经营支出</span></el-menu-item>
+        <el-menu-item index="/inventory">
+          <el-icon><Box /></el-icon>
+          <span>库存管理</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
@@ -90,7 +96,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { CollectionTag, DataLine, Goods, Menu, Setting, ShoppingCart, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
+import { Box, CollectionTag, DataLine, Goods, Menu, Money, Setting, Sell, ShoppingCart, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -107,3 +113,9 @@ async function handleLogout() {
   router.replace('/login')
 }
 </script>
+
+
+
+
+
+

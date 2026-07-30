@@ -1,0 +1,77 @@
+import request from './request'
+
+export function getSalesApi(params) {
+  return request({
+    url: '/api/sales',
+    method: 'get',
+    params: cleanQuery(params)
+  })
+}
+
+export function getSaleSummaryApi(params) {
+  return request({
+    url: '/api/sales/summary',
+    method: 'get',
+    params: cleanQuery(params)
+  })
+}
+
+export function getAvailableSaleStockApi(params) {
+  return request({
+    url: '/api/sales/available-stock',
+    method: 'get',
+    params: cleanQuery(params),
+    paramsSerializer: {
+      serialize: serializeQuery
+    }
+  })
+}
+
+export function createSaleApi(data) {
+  return request({
+    url: '/api/sales',
+    method: 'post',
+    data
+  })
+}
+
+export function updateSaleApi(id, data) {
+  return request({
+    url: `/api/sales/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function getSaleItemsApi(id) {
+  return request({
+    url: `/api/sales/${id}/items`,
+    method: 'get'
+  })
+}
+
+function cleanQuery(params) {
+  const query = { ...params }
+  Object.keys(query).forEach((key) => {
+    const value = query[key]
+    if (value === '' || value === null || value === undefined) {
+      delete query[key]
+    }
+    if (Array.isArray(value) && value.length === 0) {
+      delete query[key]
+    }
+  })
+  return query
+}
+
+function serializeQuery(params) {
+  const searchParams = new URLSearchParams()
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (Array.isArray(value)) {
+      value.forEach((item) => searchParams.append(key, item))
+      return
+    }
+    searchParams.append(key, value)
+  })
+  return searchParams.toString()
+}

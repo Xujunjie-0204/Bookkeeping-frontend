@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-container class="app-shell">
     <el-aside width="220px" class="sidebar">
       <div class="sidebar-title">经营记账</div>
@@ -24,6 +24,12 @@
         <el-menu-item index="/purchases">
           <el-icon><ShoppingCart /></el-icon>
           <span>采购进货</span>
+        </el-menu-item>
+        <el-menu-item index="/sales"><el-icon><Sell /></el-icon><span>销售管理</span></el-menu-item>
+        <el-menu-item index="/expenses"><el-icon><Money /></el-icon><span>经营支出</span></el-menu-item>
+        <el-menu-item index="/inventory">
+          <el-icon><Box /></el-icon>
+          <span>库存管理</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
@@ -90,15 +96,17 @@
               </template>
             </el-table-column>
             <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
-            <el-table-column label="操作" width="230" fixed="right">
+            <el-table-column label="操作" width="210" fixed="right" align="center">
               <template #default="{ row }">
-                <el-button :icon="Plus" text type="primary" @click="openCreate(row)">新增下级</el-button>
-                <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
-                <el-popconfirm title="确认删除该商品类型？" @confirm="handleDelete(row)">
-                  <template #reference>
-                    <el-button :icon="Delete" text type="danger">删除</el-button>
-                  </template>
-                </el-popconfirm>
+                <div class="row-actions type-row-actions">
+                  <el-button :icon="Plus" text type="primary" @click="openCreate(row)">新增下级</el-button>
+                  <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
+                  <el-popconfirm title="确认删除该商品类型？" @confirm="handleDelete(row)">
+                    <template #reference>
+                      <el-button :icon="Delete" text type="danger">删除</el-button>
+                    </template>
+                  </el-popconfirm>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -147,6 +155,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   CollectionTag,
+  Box,
   DataLine,
   Delete,
   Edit,
@@ -155,7 +164,7 @@ import {
   Plus,
   Refresh,
   Setting,
-  ShoppingCart,
+  Sell, ShoppingCart,
   SwitchButton,
   User,
   UserFilled
@@ -284,3 +293,9 @@ function resetForm() {
   formRef.value?.clearValidate()
 }
 </script>
+
+
+
+
+
+

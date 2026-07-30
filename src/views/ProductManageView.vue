@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-container class="app-shell">
     <el-aside width="220px" class="sidebar">
       <div class="sidebar-title">经营记账</div>
@@ -24,6 +24,12 @@
         <el-menu-item index="/purchases">
           <el-icon><ShoppingCart /></el-icon>
           <span>采购进货</span>
+        </el-menu-item>
+        <el-menu-item index="/sales"><el-icon><Sell /></el-icon><span>销售管理</span></el-menu-item>
+        <el-menu-item index="/expenses"><el-icon><Money /></el-icon><span>经营支出</span></el-menu-item>
+        <el-menu-item index="/inventory">
+          <el-icon><Box /></el-icon>
+          <span>库存管理</span>
         </el-menu-item>
         <el-menu-item index="/profile">
           <el-icon><User /></el-icon>
@@ -206,11 +212,12 @@
 
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   CollectionTag,
   DataLine,
+  Box,
   Delete,
   Edit,
   Goods,
@@ -220,7 +227,7 @@ import {
   RefreshLeft,
   Search,
   Setting,
-  ShoppingCart,
+  Sell, ShoppingCart,
   SwitchButton,
   User,
   UserFilled
@@ -235,6 +242,7 @@ import {
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const products = ref([])
 const productTypeOptions = ref([])
@@ -289,6 +297,7 @@ async function loadProducts() {
     const result = await getProductsApi(query)
     products.value = result.list || []
     total.value = result.total || 0
+    openRouteEditProduct()
   } finally {
     loading.value = false
   }
@@ -336,6 +345,25 @@ function openEdit(row) {
     remark: row.remark || ''
   })
   dialogVisible.value = true
+}
+
+async function openRouteEditProduct() {
+  const editId = Number(route.query.editId || 0)
+  if (!editId || editingId.value === editId || dialogVisible.value) {
+    return
+  }
+  let product = products.value.find((item) => item.id === editId)
+  if (!product) {
+    const result = await getProductsApi({
+      pageNum: 1,
+      pageSize: 200,
+      status: null
+    })
+    product = (result.list || []).find((item) => item.id === editId)
+  }
+  if (product) {
+    openEdit(product)
+  }
 }
 
 async function handleSubmit() {
@@ -387,3 +415,9 @@ function resetForm() {
   formRef.value?.clearValidate()
 }
 </script>
+
+
+
+
+
+

@@ -1,11 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import LoginView from '@/views/LoginView.vue'
-import DashboardView from '@/views/DashboardView.vue'
+import DashboardView from '@/views/dashboard/index.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import ProductManageView from '@/views/ProductManageView.vue'
 import ProductTypeManageView from '@/views/ProductTypeManageView.vue'
 import PurchaseManageView from '@/views/PurchaseManageView.vue'
+import InventoryManageView from '@/views/InventoryManageView.vue'
+import SaleManageView from '@/views/SaleManageView.vue'
+import ExpenseManageView from '@/views/ExpenseManageView.vue'
 import MenuManageView from '@/views/MenuManageView.vue'
 import RoleManageView from '@/views/RoleManageView.vue'
 
@@ -44,6 +47,21 @@ const routes = [
     path: '/purchases',
     name: 'purchases',
     component: PurchaseManageView
+  },
+  {
+    path: '/sales',
+    name: 'sales',
+    component: SaleManageView
+  },
+  {
+    path: '/expenses',
+    name: 'expenses',
+    component: ExpenseManageView
+  },
+  {
+    path: '/inventory',
+    name: 'inventory',
+    component: InventoryManageView
   },
   {
     path: '/system/menus',
