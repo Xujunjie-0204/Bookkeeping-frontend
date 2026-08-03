@@ -57,6 +57,19 @@ export function getSaleItemsApi(id) {
   })
 }
 
+export function recognizeSaleOcrApi(file) {
+  const data = new FormData()
+  data.append('file', file)
+  return request({
+    url: '/api/sales/ocr',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 function cleanQuery(params) {
   const query = { ...params }
   Object.keys(query).forEach((key) => {

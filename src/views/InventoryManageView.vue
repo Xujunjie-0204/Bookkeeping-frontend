@@ -101,7 +101,8 @@
                   <el-table-column prop="productTypeName" label="商品类型" min-width="120" show-overflow-tooltip />
                   <el-table-column prop="brand" label="品牌" width="110" show-overflow-tooltip />
                   <el-table-column prop="model" label="型号" min-width="120" show-overflow-tooltip />
-                  <el-table-column prop="initialQuantity" label="入库数量" width="100" />
+                  <el-table-column prop="initialQuantity" label="累计入库" width="100" />
+                  <el-table-column prop="availableQuantity" label="当前库存" width="100" />
                   <el-table-column prop="lockedQuantity" label="锁定库存" width="100" />
                   <el-table-column prop="soldQuantity" label="已售数量" width="100" />
                   <el-table-column prop="stockAmount" label="库存金额" width="120" />

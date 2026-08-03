@@ -45,6 +45,19 @@ export function getPurchaseItemsApi(id) {
   })
 }
 
+export function recognizePurchaseOcrApi(file) {
+  const data = new FormData()
+  data.append('file', file)
+  return request({
+    url: '/api/purchases/ocr',
+    method: 'post',
+    data,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
 export function deletePurchaseApi(id) {
   return request({
     url: `/api/purchases/${id}`,

@@ -34,7 +34,19 @@
         </div>
       </el-header>
 
-      <el-main class="dashboard-main">
+      <el-main
+        class="dashboard-main purchase-drop-zone"
+        :class="{ 'is-dragging': ocrDragging }"
+        @dragenter.prevent="handleOcrDragEnter"
+        @dragover.prevent="handleOcrDragOver"
+        @dragleave.prevent="handleOcrDragLeave"
+        @drop.prevent="handleOcrDrop"
+      >
+        <div v-if="ocrDragging" class="ocr-drop-mask">
+          <el-icon><Upload /></el-icon>
+          <strong>松开图片开始 OCR 识别</strong>
+          <span>识别后会自动打开新增销售订单并回填订单信息</span>
+        </div>
         <section class="table-panel">
           <div class="table-toolbar">
             <div>
@@ -43,6 +55,7 @@
             </div>
             <div class="toolbar-actions">
               <el-button :icon="Refresh" :loading="loading" @click="loadSales">刷新</el-button>
+              <el-button class="ocr-button" :icon="Upload" :loading="ocrRecognizing" @click="openOcrUpload">OCR识别</el-button>
               <el-button type="primary" :icon="Plus" @click="openCreate">新增订单</el-button>
             </div>
           </div>
@@ -87,9 +100,9 @@
           </div>
 
           <div class="table-scroll">
-            <el-table v-loading="loading" :data="sales" border>
-              <el-table-column prop="recordNo" label="销售单号" min-width="160" show-overflow-tooltip />
-              <el-table-column prop="platform" label="平台" width="100" />
+              <el-table v-loading="loading" :data="sales" border>
+                <el-table-column prop="recordNo" label="销售单号" min-width="160" show-overflow-tooltip />
+              <el-table-column prop="buyerName" label="买家" min-width="120" show-overflow-tooltip />
               <el-table-column label="商品名称" min-width="180" show-overflow-tooltip>
                 <template #default="{ row }">
                   <el-button class="link-button" text type="primary" @click="openSaleDetail(row)">{{ row.productName || '查看详情' }}</el-button>
@@ -143,6 +156,14 @@
     </el-container>
 
     <el-dialog v-model="dialogVisible" :title="editingId ? '编辑销售订单' : '新增销售订单'" width="min(1240px, calc(100vw - 64px))" class="sale-order-dialog">
+      <div v-if="!editingId" class="ocr-assist-bar">
+        <div>
+          <strong>OCR 辅助录入</strong>
+          <span>{{ ocrRecognizing ? `正在识别图片，${ocrProgress}%` : '可上传闲鱼、转转等销售订单截图，自动回填订单信息。' }}</span>
+        </div>
+        <el-button :icon="Upload" :loading="ocrRecognizing" @click="triggerOcrFileInput">上传截图识别</el-button>
+        <input ref="ocrFileInput" class="hidden-file-input" type="file" accept="image/*,.pdf" @change="handleOcrFileChange" />
+      </div>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="92px" class="sale-order-form">
         <div class="sale-form-sections">
           <section class="sale-form-section">
@@ -289,9 +310,11 @@
           <el-table v-loading="stockLoading" :data="availableStock" border @selection-change="handleStockSelection">
             <el-table-column type="selection" width="48" :selectable="stockSelectable" />
             <el-table-column prop="purchaseNo" label="采购单号" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="purchaseDate" label="采购日期" width="110" />
+            <el-table-column label="采购日期" width="170">
+              <template #default="{ row }">{{ formatDateTime(row.purchaseDate) }}</template>
+            </el-table-column>
             <el-table-column prop="productName" label="商品名称" min-width="170" show-overflow-tooltip />
-            <el-table-column prop="deviceNo" label="设备编号" min-width="130" show-overflow-tooltip />
+            <el-table-column prop="sellerAccount" label="卖家账号" min-width="130" show-overflow-tooltip />
             <el-table-column prop="conditionDesc" label="成色/瑕疵" min-width="150" show-overflow-tooltip />
             <el-table-column prop="availableQuantity" label="可售库存" width="90" />
             <el-table-column prop="unitCost" label="成本" width="90" />
@@ -391,12 +414,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Box, CollectionTag, DataLine, Delete, Edit, Goods, InfoFilled, Menu, Money, Plus, Refresh, RefreshLeft, Search, Sell, Setting, ShoppingCart, SwitchButton, User, UserFilled } from '@element-plus/icons-vue'
+import { Box, CollectionTag, DataLine, Delete, Edit, Goods, InfoFilled, Menu, Money, Plus, Refresh, RefreshLeft, Search, Sell, Setting, ShoppingCart, SwitchButton, Upload, User, UserFilled } from '@element-plus/icons-vue'
 import { getProductTypeTreeApi } from '@/api/product'
-import { createSaleApi, getAvailableSaleStockApi, getSaleItemsApi, getSaleSummaryApi, getSalesApi, updateSaleApi } from '@/api/sale'
+import { createSaleApi, getAvailableSaleStockApi, getSaleItemsApi, getSaleSummaryApi, getSalesApi, recognizeSaleOcrApi, updateSaleApi } from '@/api/sale'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -413,6 +436,9 @@ const dateRange = ref([...defaultDateRange])
 const loading = ref(false)
 const saving = ref(false)
 const stockLoading = ref(false)
+const ocrRecognizing = ref(false)
+const ocrDragging = ref(false)
+const ocrProgress = ref(0)
 const dialogVisible = ref(false)
 const editingId = ref(null)
 const stockPickerVisible = ref(false)
@@ -421,6 +447,8 @@ const saleItemsLoading = ref(false)
 const stockKeyword = ref('')
 const stockProductTypeIds = ref([])
 const formRef = ref()
+const ocrFileInput = ref()
+let ocrDragDepth = 0
 
 const query = reactive({
   pageNum: 1,
@@ -525,6 +553,96 @@ function openCreate() {
   dialogVisible.value = true
 }
 
+async function openOcrUpload() {
+  editingId.value = null
+  Object.assign(form, defaultForm())
+  dialogVisible.value = true
+  await nextTick()
+  triggerOcrFileInput()
+}
+
+function triggerOcrFileInput() {
+  if (ocrRecognizing.value) {
+    return
+  }
+  ocrFileInput.value?.click()
+}
+
+async function handleOcrFileChange(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) {
+    return
+  }
+  await recognizeSaleImage(file)
+}
+
+function handleOcrDragEnter(event) {
+  if (!hasOcrFile(event.dataTransfer)) {
+    return
+  }
+  ocrDragDepth += 1
+  ocrDragging.value = true
+}
+
+function handleOcrDragOver(event) {
+  if (hasOcrFile(event.dataTransfer)) {
+    event.dataTransfer.dropEffect = 'copy'
+  }
+}
+
+function handleOcrDragLeave() {
+  if (!ocrDragging.value) {
+    return
+  }
+  ocrDragDepth = Math.max(ocrDragDepth - 1, 0)
+  if (ocrDragDepth === 0) {
+    ocrDragging.value = false
+  }
+}
+
+async function handleOcrDrop(event) {
+  ocrDragDepth = 0
+  ocrDragging.value = false
+  const file = Array.from(event.dataTransfer?.files || []).find(isOcrFile)
+  if (!file) {
+    ElMessage.warning('请拖入图片或 PDF 文件')
+    return
+  }
+  editingId.value = null
+  Object.assign(form, defaultForm())
+  dialogVisible.value = true
+  await recognizeSaleImage(file)
+}
+
+function hasOcrFile(dataTransfer) {
+  const items = Array.from(dataTransfer?.items || [])
+  return items.some((item) => item.kind === 'file' && isOcrFile(item))
+}
+
+function isOcrFile(file) {
+  return file?.type?.startsWith('image/') || file?.type === 'application/pdf'
+}
+
+async function recognizeSaleImage(file) {
+  if (ocrRecognizing.value) {
+    return
+  }
+  ocrRecognizing.value = true
+  ocrProgress.value = 10
+  try {
+    const parsed = await recognizeSaleOcrApi(file)
+    ocrProgress.value = 90
+    await applySaleOcrResult(parsed || {}, parsed?.rawText || '')
+    ElMessage.success('OCR识别完成，请核对后保存')
+  } catch (error) {
+    ElMessage.error(error?.message || 'OCR识别失败，请确认后端Tesseract配置')
+  } finally {
+    ocrRecognizing.value = false
+    ocrProgress.value = 0
+  }
+}
+
 async function openEdit(row) {
   editingId.value = row.id
   Object.assign(form, {
@@ -610,6 +728,72 @@ function confirmStockPicker() {
     })
   })
   stockPickerVisible.value = false
+}
+
+async function applySaleOcrResult(parsed, rawText) {
+  form.platform = parsed.platform || form.platform || '闲鱼'
+  form.platformOrderNo = parsed.platformOrderNo || form.platformOrderNo
+  form.buyerName = parsed.buyerName || form.buyerName
+  form.buyerPhone = parsed.buyerPhone || form.buyerPhone
+  form.businessDate = parsed.businessDate || form.businessDate
+  form.paymentStatus = parsed.paymentStatus ?? form.paymentStatus
+  form.shipmentStatus = parsed.shipmentStatus ?? form.shipmentStatus
+  form.expressCompany = parsed.expressCompany || form.expressCompany || '韵达'
+  form.expressNo = parsed.expressNo || form.expressNo
+  if (parsed.productTitle) {
+    form.remark = appendRemark(form.remark, `OCR商品：${parsed.productTitle}`)
+  }
+  form.remark = appendRemark(form.remark, 'OCR识别来源：销售订单截图')
+
+  if (parsed.productTitle || parsed.saleAmount) {
+    const matched = await matchSaleStock(parsed.productTitle)
+    if (matched && !form.items.some((item) => item.batchId === matched.batchId)) {
+      form.items.push({
+        ...matched,
+        quantity: 1,
+        saleUnitPrice: Number(parsed.saleAmount || matched.defaultSalePrice || matched.unitCost || 0),
+        remark: ''
+      })
+    }
+  }
+  if (!parsed.platformOrderNo && !parsed.saleAmount) {
+    console.debug('Sale OCR raw text:', rawText)
+  }
+}
+
+async function matchSaleStock(title) {
+  if (!title) {
+    return null
+  }
+  stockKeyword.value = ''
+  stockProductTypeIds.value = []
+  await loadAvailableStock()
+  const normalizedTitle = normalizeSearchText(title)
+  let best = null
+  let bestScore = 0
+  availableStock.value.forEach((stock) => {
+    const fields = [stock.productName, stock.brand, stock.model, stock.specification, stock.conditionDesc].filter(Boolean)
+    let score = 0
+    fields.forEach((field) => {
+      const normalizedField = normalizeSearchText(field)
+      if (!normalizedField) {
+        return
+      }
+      if (normalizedTitle.includes(normalizedField) || normalizedField.includes(normalizedTitle)) {
+        score += 10
+      }
+      normalizedField.split('').forEach((char) => {
+        if (normalizedTitle.includes(char)) {
+          score += 1
+        }
+      })
+    })
+    if (score > bestScore) {
+      best = stock
+      bestScore = score
+    }
+  })
+  return bestScore >= 5 ? best : null
 }
 
 function removeSaleItem(index) {
@@ -732,12 +916,31 @@ function formatMoney(value) {
   return Number(value || 0).toFixed(2)
 }
 
+function formatDateTime(value) {
+  if (!value) {
+    return '-'
+  }
+  const text = String(value).replace('T', ' ')
+  return text.length > 19 ? text.slice(0, 19) : text
+}
+
 function grossProfitRate(profit, amount) {
   const saleAmount = Number(amount || 0)
   if (!saleAmount) {
     return '0.00%'
   }
   return `${((Number(profit || 0) / saleAmount) * 100).toFixed(2)}%`
+}
+
+function normalizeSearchText(value) {
+  return String(value || '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, '').toLowerCase()
+}
+
+function appendRemark(existing, content) {
+  if (!content) {
+    return existing || ''
+  }
+  return existing ? `${existing}\n${content}` : content
 }
 
 function today() {
