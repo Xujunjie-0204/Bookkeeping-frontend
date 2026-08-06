@@ -48,6 +48,10 @@
             <el-icon><UserFilled /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
+          <el-menu-item index="/system/configs">
+            <el-icon><Setting /></el-icon>
+            <span>系统配置</span>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -77,54 +81,58 @@
             </div>
           </div>
 
-          <el-table
-            v-loading="loading"
-            :data="menus"
-            row-key="id"
-            border
-            default-expand-all
-            :tree-props="{ children: 'children' }"
-          >
-            <el-table-column prop="menuName" label="菜单名称" min-width="180" />
-            <el-table-column prop="menuType" label="类型" width="92">
-              <template #default="{ row }">
-                <el-tag :type="typeMeta[row.menuType]?.tag || 'info'">
-                  {{ typeMeta[row.menuType]?.label || row.menuType }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="path" label="路由地址" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="component" label="组件" min-width="150" show-overflow-tooltip />
-            <el-table-column prop="permissionCode" label="权限标识" min-width="180" show-overflow-tooltip />
-            <el-table-column prop="sortOrder" label="排序" width="82" />
-            <el-table-column prop="visible" label="显示" width="82">
-              <template #default="{ row }">
-                <el-tag :type="row.visible === 1 ? 'success' : 'info'">
-                  {{ row.visible === 1 ? '显示' : '隐藏' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column prop="status" label="状态" width="82">
-              <template #default="{ row }">
-                <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                  {{ row.status === 1 ? '启用' : '停用' }}
-                </el-tag>
-              </template>
-            </el-table-column>
-            <el-table-column label="操作" width="210" fixed="right" align="center">
-              <template #default="{ row }">
-                <div class="row-actions type-row-actions">
-                  <el-button :icon="Plus" text type="primary" @click="openCreate(row)">新增下级</el-button>
-                  <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
-                  <el-popconfirm title="确认删除该菜单？" @confirm="handleDelete(row)">
-                    <template #reference>
-                      <el-button :icon="Delete" text type="danger">删除</el-button>
-                    </template>
-                  </el-popconfirm>
-                </div>
-              </template>
-            </el-table-column>
-          </el-table>
+          <div class="table-scroll">
+            <el-table
+              v-loading="loading"
+              class="menu-manage-table"
+              :data="menus"
+              row-key="id"
+              border
+              default-expand-all
+              :fit="false"
+              :tree-props="{ children: 'children' }"
+            >
+              <el-table-column prop="menuName" label="菜单名称" min-width="220" show-overflow-tooltip />
+              <el-table-column prop="menuType" label="类型" width="92">
+                <template #default="{ row }">
+                  <el-tag :type="typeMeta[row.menuType]?.tag || 'info'">
+                    {{ typeMeta[row.menuType]?.label || row.menuType }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="path" label="路由地址" min-width="220" show-overflow-tooltip />
+              <el-table-column prop="component" label="组件" min-width="190" show-overflow-tooltip />
+              <el-table-column prop="permissionCode" label="权限标识" min-width="240" show-overflow-tooltip />
+              <el-table-column prop="sortOrder" label="排序" width="82" />
+              <el-table-column prop="visible" label="显示" width="82">
+                <template #default="{ row }">
+                  <el-tag :type="row.visible === 1 ? 'success' : 'info'">
+                    {{ row.visible === 1 ? '显示' : '隐藏' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column prop="status" label="状态" width="82">
+                <template #default="{ row }">
+                  <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                    {{ row.status === 1 ? '启用' : '停用' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="280" fixed="right" align="center">
+                <template #default="{ row }">
+                  <div class="row-actions type-row-actions">
+                    <el-button :icon="Plus" text type="primary" @click="openCreate(row)">新增下级</el-button>
+                    <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
+                    <el-popconfirm title="确认删除该菜单？" @confirm="handleDelete(row)">
+                      <template #reference>
+                        <el-button :icon="Delete" text type="danger">删除</el-button>
+                      </template>
+                    </el-popconfirm>
+                  </div>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </section>
       </el-main>
     </el-container>

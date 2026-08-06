@@ -48,6 +48,10 @@
             <el-icon><UserFilled /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
+          <el-menu-item index="/system/configs">
+            <el-icon><Setting /></el-icon>
+            <span>系统配置</span>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -77,81 +81,102 @@
             </div>
           </div>
 
-          <el-form class="filter-bar product-filter" :model="query" label-position="left">
-            <el-form-item label="关键字">
-              <el-input
-                v-model.trim="query.keyword"
-                clearable
-                placeholder="商品编码/名称"
-                @keyup.enter="handleSearch"
-              />
-            </el-form-item>
-            <el-form-item label="商品类型">
-              <el-tree-select
-                v-model="query.productTypeId"
+          <div class="product-manage-layout">
+            <aside class="inventory-type-panel">
+              <div class="inventory-type-head">
+                <strong>商品类型</strong>
+                <el-button text type="primary" @click="handleTypeSelect(null)">全部</el-button>
+              </div>
+              <el-tree
                 :data="productTypeOptions"
-                :props="{ label: 'typeName', value: 'id', children: 'children' }"
-                check-strictly
-                clearable
-                filterable
-                placeholder="全部类型"
-              />
-            </el-form-item>
-            <el-form-item label="状态">
-              <el-select v-model="query.status" clearable placeholder="全部状态">
-                <el-option label="启用" :value="1" />
-                <el-option label="停用" :value="0" />
-              </el-select>
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
-              <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
-            </el-form-item>
-          </el-form>
-
-          <div class="table-scroll">
-            <el-table v-loading="loading" :data="products" border>
-              <el-table-column prop="productCode" label="商品编码" min-width="130" />
-              <el-table-column prop="productName" label="商品名称" min-width="180" show-overflow-tooltip />
-              <el-table-column prop="productTypeName" label="商品类型" min-width="130" show-overflow-tooltip />
-              <el-table-column prop="brand" label="品牌" min-width="110" show-overflow-tooltip />
-              <el-table-column prop="model" label="型号" min-width="120" show-overflow-tooltip />
-              <el-table-column prop="specification" label="规格" min-width="150" show-overflow-tooltip />
-              <el-table-column prop="defaultCost" label="默认成本" width="110" />
-              <el-table-column prop="defaultSalePrice" label="默认售价" width="110" />
-              <el-table-column prop="warningStock" label="预警库存" width="100" />
-              <el-table-column prop="status" label="状态" width="90">
-                <template #default="{ row }">
-                  <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-                    {{ row.status === 1 ? '启用' : '停用' }}
-                  </el-tag>
+                :props="{ label: 'typeName', children: 'children' }"
+                node-key="id"
+                highlight-current
+                default-expand-all
+                :expand-on-click-node="false"
+                @node-click="handleTypeSelect"
+              >
+                <template #default="{ data }">
+                  <span class="inventory-type-node">
+                    <span class="inventory-type-name">{{ data.typeName }}</span>
+                  </span>
                 </template>
-              </el-table-column>
-              <el-table-column label="操作" width="150" fixed="right" align="center">
-                <template #default="{ row }">
-                  <div class="row-actions">
-                    <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
-                    <el-popconfirm title="确认删除该商品？" @confirm="handleDelete(row)">
-                      <template #reference>
-                        <el-button :icon="Delete" text type="danger">删除</el-button>
-                      </template>
-                    </el-popconfirm>
-                  </div>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+              </el-tree>
+            </aside>
 
-          <div class="pagination-bar">
-            <el-pagination
-              v-model:current-page="query.pageNum"
-              v-model:page-size="query.pageSize"
-              :total="total"
-              :page-sizes="[10, 20, 50, 100]"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="loadProducts"
-              @current-change="loadProducts"
-            />
+            <section class="inventory-content">
+              <el-form class="filter-bar product-filter product-list-filter" :model="query" label-position="left">
+                <el-form-item label="关键字">
+                  <el-input
+                    v-model.trim="query.keyword"
+                    clearable
+                    placeholder="商品编码/名称"
+                    @keyup.enter="handleSearch"
+                  />
+                </el-form-item>
+                <el-form-item label="状态">
+                  <el-select v-model="query.status" clearable placeholder="全部状态">
+                    <el-option label="启用" :value="1" />
+                    <el-option label="停用" :value="0" />
+                  </el-select>
+                </el-form-item>
+                <el-form-item>
+                  <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+                  <el-button :icon="RefreshLeft" @click="handleReset">重置</el-button>
+                </el-form-item>
+              </el-form>
+
+              <div class="table-scroll">
+                <el-table v-loading="loading" :data="products" border>
+                  <el-table-column prop="productCode" label="商品编码" min-width="120" />
+                  <el-table-column prop="productName" label="商品名称" min-width="170" show-overflow-tooltip />
+                  <el-table-column prop="productTypeName" label="商品类型" min-width="120" show-overflow-tooltip />
+                  <el-table-column prop="brand" label="品牌" min-width="100" show-overflow-tooltip />
+                  <el-table-column prop="model" label="型号" min-width="110" show-overflow-tooltip />
+                  <el-table-column prop="specification" label="规格" min-width="130" show-overflow-tooltip />
+                  <el-table-column prop="defaultCost" label="默认成本" width="100" />
+                  <el-table-column prop="defaultSalePrice" label="默认售价" width="100" />
+                  <el-table-column label="默认毛利" width="100">
+                    <template #default="{ row }">{{ formatMoney(defaultProfit(row)) }}</template>
+                  </el-table-column>
+                  <el-table-column label="毛利率" width="90">
+                    <template #default="{ row }">{{ defaultProfitRate(row) }}</template>
+                  </el-table-column>
+                  <el-table-column prop="warningStock" label="预警库存" width="90" />
+                  <el-table-column prop="status" label="状态" width="80">
+                    <template #default="{ row }">
+                      <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+                        {{ row.status === 1 ? '启用' : '停用' }}
+                      </el-tag>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="150" fixed="right" align="center">
+                    <template #default="{ row }">
+                      <div class="row-actions">
+                        <el-button :icon="Edit" text @click="openEdit(row)">编辑</el-button>
+                        <el-popconfirm title="确认删除该商品？" @confirm="handleDelete(row)">
+                          <template #reference>
+                            <el-button :icon="Delete" text type="danger">删除</el-button>
+                          </template>
+                        </el-popconfirm>
+                      </div>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+
+              <div class="pagination-bar">
+                <el-pagination
+                  v-model:current-page="query.pageNum"
+                  v-model:page-size="query.pageSize"
+                  :total="total"
+                  :page-sizes="[10, 20, 50, 100]"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="loadProducts"
+                  @current-change="loadProducts"
+                />
+              </div>
+            </section>
           </div>
         </section>
       </el-main>
@@ -323,6 +348,12 @@ function handleReset() {
   loadProducts()
 }
 
+function handleTypeSelect(node) {
+  query.productTypeId = node?.id || null
+  query.pageNum = 1
+  loadProducts()
+}
+
 function openCreate() {
   editingId.value = null
   resetForm()
@@ -396,6 +427,22 @@ async function handleDelete(row) {
 async function handleLogout() {
   await userStore.logout()
   router.replace('/login')
+}
+
+function defaultProfit(row) {
+  return Number(row.defaultSalePrice || 0) - Number(row.defaultCost || 0)
+}
+
+function defaultProfitRate(row) {
+  const salePrice = Number(row.defaultSalePrice || 0)
+  if (!salePrice) {
+    return '-'
+  }
+  return `${((defaultProfit(row) / salePrice) * 100).toFixed(2)}%`
+}
+
+function formatMoney(value) {
+  return Number(value || 0).toFixed(2)
 }
 
 function resetForm() {

@@ -48,6 +48,10 @@
             <el-icon><UserFilled /></el-icon>
             <span>角色管理</span>
           </el-menu-item>
+          <el-menu-item index="/system/configs">
+            <el-icon><Setting /></el-icon>
+            <span>系统配置</span>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -255,7 +259,14 @@
             <el-input v-model.trim="form.platformOrderNo" maxlength="80" />
           </el-form-item>
           <el-form-item label="卖家账号">
-            <el-input v-model.trim="form.sellerAccount" maxlength="100" />
+            <el-select v-model="form.sellerAccount" clearable filterable placeholder="请选择卖家账号">
+              <el-option
+                v-for="employee in employeeOptions"
+                :key="employee"
+                :label="employee"
+                :value="employee"
+              />
+            </el-select>
           </el-form-item>
           <el-form-item label="供应商">
             <el-input v-model.trim="form.supplierName" maxlength="100" />
@@ -505,6 +516,7 @@ import {
   recognizePurchaseOcrApi,
   updatePurchaseApi
 } from '@/api/purchase'
+import { getConfigsApi } from '@/api/system'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -512,6 +524,7 @@ const userStore = useUserStore()
 const purchases = ref([])
 const productOptions = ref([])
 const productTypeOptions = ref([])
+const employeeOptions = ref([])
 const total = ref(0)
 const defaultDateRange = currentMonthRange()
 const purchaseDateRange = ref([...defaultDateRange])
@@ -552,7 +565,7 @@ const form = reactive({
   platform: defaultPlatform(),
   platformOrderNo: '',
   supplierName: defaultSupplier(defaultPlatform()),
-  sellerAccount: currentUserName(),
+  sellerAccount: defaultSellerAccount(),
   purchaseDate: nowDateTime(),
   freightAmount: 0,
   discountAmount: 0,
@@ -603,6 +616,7 @@ onMounted(() => {
   }
   loadProductTypes()
   loadProducts()
+  loadEmployees()
   loadPurchases()
 })
 
@@ -630,11 +644,20 @@ async function loadProducts() {
     pageSize: 200,
     status: 1
   })
-  productOptions.value = result.list || []
+  productOptions.value = sortByProductCode(result.list || [])
 }
 
 async function loadProductTypes() {
   productTypeOptions.value = await getProductTypeTreeApi()
+}
+
+async function loadEmployees() {
+  const configs = await getConfigsApi()
+  const employeeConfig = configs.find((config) => config.configCode === 'employee_management')
+  employeeOptions.value = parseStringCollection(employeeConfig?.configValue)
+  if (!form.sellerAccount) {
+    form.sellerAccount = defaultSellerAccount()
+  }
 }
 
 function handleSearch() {
@@ -919,7 +942,7 @@ function applyOcrResult(parsed, rawText) {
   form.purchaseDate = normalizeDateTimeValue(parsed.purchaseDate) || form.purchaseDate
   form.paymentMethod = parsed.paymentMethod || form.paymentMethod || '银行卡'
   form.supplierName = parsed.supplierName || defaultSupplier(platform)
-  form.sellerAccount = parsed.sellerAccount || form.sellerAccount || currentUserName()
+  form.sellerAccount = resolveSellerAccount(parsed.sellerAccount || form.sellerAccount)
   form.freightAmount = 0
   form.discountAmount = 0
   form.otherAmount = 0
@@ -1019,7 +1042,7 @@ function resetForm() {
     platform: defaultPlatform(),
     platformOrderNo: '',
     supplierName: defaultSupplier(defaultPlatform()),
-    sellerAccount: currentUserName(),
+    sellerAccount: defaultSellerAccount(),
     purchaseDate: nowDateTime(),
     freightAmount: 0,
     discountAmount: 0,
@@ -1121,6 +1144,33 @@ function currentUserName() {
   return userStore.user?.nickname || userStore.user?.username || ''
 }
 
+function defaultSellerAccount() {
+  return employeeOptions.value[0] || currentUserName()
+}
+
+function resolveSellerAccount(value) {
+  if (value && employeeOptions.value.includes(value)) {
+    return value
+  }
+  return defaultSellerAccount()
+}
+
+function parseStringCollection(value) {
+  try {
+    const parsed = JSON.parse(value || '[]')
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === 'string' && item.trim()).map((item) => item.trim()) : []
+  } catch (error) {
+    return []
+  }
+}
+
+function sortByProductCode(list) {
+  return [...list].sort((a, b) => {
+    const codeCompare = String(a.productCode || '').localeCompare(String(b.productCode || ''), 'zh-Hans-CN', { numeric: true })
+    return codeCompare || Number(a.id || 0) - Number(b.id || 0)
+  })
+}
+
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -1152,8 +1202,6 @@ function formatDate(date) {
   return `${year}-${month}-${day}`
 }
 </script>
-
-
 
 
 

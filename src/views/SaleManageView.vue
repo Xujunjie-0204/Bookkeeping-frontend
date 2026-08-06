@@ -18,6 +18,10 @@
           <template #title><el-icon><Setting /></el-icon><span>系统管理</span></template>
           <el-menu-item index="/system/menus"><el-icon><Menu /></el-icon><span>菜单管理</span></el-menu-item>
           <el-menu-item index="/system/roles"><el-icon><UserFilled /></el-icon><span>角色管理</span></el-menu-item>
+          <el-menu-item index="/system/configs">
+            <el-icon><Setting /></el-icon>
+            <span>系统配置</span>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -102,12 +106,12 @@
           <div class="table-scroll">
               <el-table v-loading="loading" :data="sales" border>
                 <el-table-column prop="recordNo" label="销售单号" min-width="160" show-overflow-tooltip />
-              <el-table-column prop="buyerName" label="买家" min-width="120" show-overflow-tooltip />
               <el-table-column label="商品名称" min-width="180" show-overflow-tooltip>
                 <template #default="{ row }">
                   <el-button class="link-button" text type="primary" @click="openSaleDetail(row)">{{ row.productName || '查看详情' }}</el-button>
                 </template>
               </el-table-column>
+              <el-table-column prop="buyerName" label="买家" min-width="120" show-overflow-tooltip />
               <el-table-column prop="purchaseNo" label="关联采购单" min-width="160" show-overflow-tooltip />
               <el-table-column prop="businessDate" label="销售日期" width="120" />
               <el-table-column prop="itemCount" label="数量" width="80" />
@@ -116,9 +120,6 @@
               <el-table-column prop="profitAmount" label="利润" width="100" />
               <el-table-column label="毛利率" width="90">
                 <template #default="{ row }">{{ grossProfitRate(row.profitAmount, row.totalSaleAmount) }}</template>
-              </el-table-column>
-              <el-table-column label="收款" width="90">
-                <template #default="{ row }"><el-tag :type="row.paymentStatus === 1 ? 'success' : 'warning'">{{ row.paymentStatus === 1 ? '已收款' : '未收款' }}</el-tag></template>
               </el-table-column>
               <el-table-column label="发货" width="90">
                 <template #default="{ row }"><el-tag :type="row.shipmentStatus === 1 ? 'success' : 'info'">{{ row.shipmentStatus === 1 ? '已发货' : '未发货' }}</el-tag></template>
@@ -129,7 +130,7 @@
                   <span v-else>-</span>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="140" fixed="right" align="center">
+              <el-table-column label="操作" width="160" fixed="right" align="center">
                 <template #default="{ row }">
                   <div class="row-actions">
                     <el-button :icon="InfoFilled" text @click="openSaleDetail(row)">详情</el-button>
@@ -197,16 +198,22 @@
                 </el-select>
               </el-form-item>
               <el-form-item label="发货状态">
-                <el-select v-model="form.shipmentStatus" placeholder="请选择">
-                  <el-option label="未发货" :value="0" />
-                  <el-option label="已发货" :value="1" />
-                </el-select>
+                <el-switch
+                  v-model="form.shipmentStatus"
+                  :active-value="1"
+                  :inactive-value="0"
+                  active-text="已发货"
+                  inactive-text="未发货"
+                />
               </el-form-item>
               <el-form-item label="快递公司">
                 <el-select v-model="form.expressCompany" clearable placeholder="请选择">
-                  <el-option label="韵达" value="韵达" />
-                  <el-option label="京东" value="京东" />
-                  <el-option label="顺丰" value="顺丰" />
+                  <el-option
+                    v-for="company in expressCompanyOptions"
+                    :key="company"
+                    :label="company"
+                    :value="company"
+                  />
                 </el-select>
               </el-form-item>
               <el-form-item label="快递单号"><el-input v-model.trim="form.expressNo" maxlength="80" /></el-form-item>
@@ -276,7 +283,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog v-model="stockPickerVisible" title="选择进货商品" width="min(1180px, calc(100vw - 64px))">
+    <el-dialog v-model="stockPickerVisible" title="选择进货商品" width="min(1380px, calc(100vw - 48px))">
       <div class="stock-picker-layout">
         <aside class="stock-picker-types">
           <div class="stock-picker-type-head">
@@ -316,9 +323,12 @@
             <el-table-column prop="productName" label="商品名称" min-width="170" show-overflow-tooltip />
             <el-table-column prop="sellerAccount" label="卖家账号" min-width="130" show-overflow-tooltip />
             <el-table-column prop="conditionDesc" label="成色/瑕疵" min-width="150" show-overflow-tooltip />
+            <el-table-column label="成本" width="100" align="right">
+              <template #default="{ row }">
+                {{ formatMoney(row.unitCost) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="availableQuantity" label="可售库存" width="90" />
-            <el-table-column prop="unitCost" label="成本" width="90" />
-            <el-table-column prop="defaultSalePrice" label="默认售价" width="100" />
           </el-table>
         </section>
       </div>
@@ -420,6 +430,7 @@ import { ElMessage } from 'element-plus'
 import { Box, CollectionTag, DataLine, Delete, Edit, Goods, InfoFilled, Menu, Money, Plus, Refresh, RefreshLeft, Search, Sell, Setting, ShoppingCart, SwitchButton, Upload, User, UserFilled } from '@element-plus/icons-vue'
 import { getProductTypeTreeApi } from '@/api/product'
 import { createSaleApi, getAvailableSaleStockApi, getSaleItemsApi, getSaleSummaryApi, getSalesApi, recognizeSaleOcrApi, updateSaleApi } from '@/api/sale'
+import { getConfigsApi } from '@/api/system'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
@@ -446,6 +457,7 @@ const saleItemsVisible = ref(false)
 const saleItemsLoading = ref(false)
 const stockKeyword = ref('')
 const stockProductTypeIds = ref([])
+const expressCompanyOptions = ref(['韵达', '京东', '顺丰'])
 const formRef = ref()
 const ocrFileInput = ref()
 let ocrDragDepth = 0
@@ -502,6 +514,7 @@ onMounted(() => {
     userStore.fetchProfile()
   }
   loadProductTypes()
+  loadExpressCompanyOptions()
   loadSales()
 })
 
@@ -550,6 +563,7 @@ function handleDateRangeChange(value) {
 function openCreate() {
   editingId.value = null
   Object.assign(form, defaultForm())
+  form.expressCompany = defaultExpressCompany()
   dialogVisible.value = true
 }
 
@@ -654,7 +668,7 @@ async function openEdit(row) {
     businessDate: row.businessDate || today(),
     paymentStatus: row.paymentStatus ?? 1,
     shipmentStatus: row.shipmentStatus ?? 0,
-    expressCompany: row.expressCompany || '韵达',
+    expressCompany: row.expressCompany || defaultExpressCompany(),
     expressNo: row.expressNo || '',
     remark: row.remark || '',
     items: []
@@ -684,6 +698,15 @@ async function openStockPicker() {
 
 async function loadProductTypes() {
   productTypeOptions.value = await getProductTypeTreeApi()
+}
+
+async function loadExpressCompanyOptions() {
+  const configs = await getConfigsApi()
+  const expressConfig = configs.find((config) => config.configCode === 'express_company')
+  const options = parseStringCollection(expressConfig?.configValue)
+  if (options.length) {
+    expressCompanyOptions.value = options
+  }
 }
 
 async function loadAvailableStock() {
@@ -738,7 +761,7 @@ async function applySaleOcrResult(parsed, rawText) {
   form.businessDate = parsed.businessDate || form.businessDate
   form.paymentStatus = parsed.paymentStatus ?? form.paymentStatus
   form.shipmentStatus = parsed.shipmentStatus ?? form.shipmentStatus
-  form.expressCompany = parsed.expressCompany || form.expressCompany || '韵达'
+  form.expressCompany = resolveExpressCompany(parsed.expressCompany || form.expressCompany)
   form.expressNo = parsed.expressNo || form.expressNo
   if (parsed.productTitle) {
     form.remark = appendRemark(form.remark, `OCR商品：${parsed.productTitle}`)
@@ -876,11 +899,34 @@ function defaultForm() {
     otherExpense: 0,
     paymentStatus: 1,
     shipmentStatus: 0,
-    expressCompany: '韵达',
+    expressCompany: defaultExpressCompany(),
     worryFreeSale: false,
     expressNo: '',
     remark: '',
     items: []
+  }
+}
+
+function defaultExpressCompany() {
+  return expressCompanyOptions.value[0] || ''
+}
+
+function resolveExpressCompany(value) {
+  const company = String(value || '').trim()
+  if (company && expressCompanyOptions.value.includes(company)) {
+    return company
+  }
+  return defaultExpressCompany()
+}
+
+function parseStringCollection(value) {
+  try {
+    const parsed = JSON.parse(value || '[]')
+    return Array.isArray(parsed)
+      ? parsed.map((item) => String(item || '').trim()).filter(Boolean)
+      : []
+  } catch (error) {
+    return []
   }
 }
 

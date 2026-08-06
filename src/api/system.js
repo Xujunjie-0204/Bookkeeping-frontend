@@ -74,3 +74,33 @@ export function assignRoleMenusApi(id, menuIds) {
     data: { menuIds }
   })
 }
+
+export function getConfigsApi() {
+  return request({
+    url: '/api/system/configs',
+    method: 'get'
+  })
+}
+
+export function createConfigApi(data) {
+  return request({
+    url: '/api/system/configs',
+    method: 'post',
+    data
+  })
+}
+
+export function updateConfigApi(id, data) {
+  return request({
+    url: `/api/system/configs/${id}`,
+    method: 'put',
+    data
+  })
+}
+
+export function deleteConfigApi(id) {
+  return request({
+    url: `/api/system/configs/${id}`,
+    method: 'delete'
+  })
+}

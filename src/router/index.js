@@ -11,6 +11,7 @@ import SaleManageView from '@/views/SaleManageView.vue'
 import ExpenseManageView from '@/views/ExpenseManageView.vue'
 import MenuManageView from '@/views/MenuManageView.vue'
 import RoleManageView from '@/views/RoleManageView.vue'
+import ConfigManageView from '@/views/ConfigManageView.vue'
 
 const routes = [
   {
@@ -72,6 +73,11 @@ const routes = [
     path: '/system/roles',
     name: 'roles',
     component: RoleManageView
+  },
+  {
+    path: '/system/configs',
+    name: 'configs',
+    component: ConfigManageView
   }
 ]
 

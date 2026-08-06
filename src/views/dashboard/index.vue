@@ -18,6 +18,10 @@
           <template #title><el-icon><Setting /></el-icon><span>系统管理</span></template>
           <el-menu-item index="/system/menus"><el-icon><Menu /></el-icon><span>菜单管理</span></el-menu-item>
           <el-menu-item index="/system/roles"><el-icon><UserFilled /></el-icon><span>角色管理</span></el-menu-item>
+          <el-menu-item index="/system/configs">
+            <el-icon><Setting /></el-icon>
+            <span>系统配置</span>
+          </el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>
@@ -54,6 +58,7 @@
             </el-form-item>
             <el-form-item label="分类">
               <el-tree-select
+                class="dashboard-type-select"
                 v-model="selectedProductTypeId"
                 :data="productTypeOptions"
                 :props="{ label: 'typeName', value: 'id', children: 'children' }"
@@ -122,8 +127,8 @@
         </el-row>
 
         <el-row :gutter="16" class="cockpit-section">
-          <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card"><template #header>商品销量TOP10</template><TopTable :data="top.productSalesTop" mode="sales" /></el-card></el-col>
-          <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card"><template #header>商品利润TOP10</template><TopTable :data="top.productProfitTop" mode="profit" /></el-card></el-col>
+          <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card top-rank-card"><template #header>商品销量TOP30</template><TopTable :data="top.productSalesTop" mode="sales" /></el-card></el-col>
+          <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card top-rank-card"><template #header>商品利润TOP30</template><TopTable :data="top.productProfitTop" mode="profit" /></el-card></el-col>
           <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card"><template #header>库存预警</template><InventoryWarning :data="top.inventoryWarning" /></el-card></el-col>
           <el-col :xs="24" :lg="12"><el-card shadow="never" class="cockpit-card"><template #header>AI经营建议</template><AISuggestion :data="top.aiSuggestion" /></el-card></el-col>
         </el-row>
@@ -375,7 +380,7 @@ function handleReset() {
 function currentMonthRange() {
   const now = new Date()
   const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const end = now
   return [formatDate(start), formatDate(end)]
 }
 
