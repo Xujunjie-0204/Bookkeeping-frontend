@@ -70,6 +70,14 @@ export function recognizeSaleOcrApi(file) {
   })
 }
 
+export function getPendingGoofishOrdersApi(params = {}) {
+  return request({ url: '/api/goofish/orders', method: 'get', params: { importStatus: 0, ...params } })
+}
+
+export function markGoofishOrderProcessedApi(id, saleRecordId) {
+  return request({ url: `/api/goofish/orders/${id}/processed`, method: 'post', params: { saleRecordId } })
+}
+
 function cleanQuery(params) {
   const query = { ...params }
   Object.keys(query).forEach((key) => {

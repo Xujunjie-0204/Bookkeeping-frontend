@@ -59,6 +59,9 @@
             </div>
             <div class="toolbar-actions">
               <el-button :icon="Refresh" :loading="loading" @click="loadSales">刷新</el-button>
+              <el-button type="warning" @click="openPendingOrders">
+                闲鱼待处理<span v-if="pendingOrders.length">（{{ pendingOrders.length }}）</span>
+              </el-button>
               <el-button class="ocr-button" :icon="Upload" :loading="ocrRecognizing" @click="openOcrUpload">OCR识别</el-button>
               <el-button type="primary" :icon="Plus" @click="openCreate">新增订单</el-button>
             </div>
@@ -283,6 +286,55 @@
       </template>
     </el-dialog>
 
+    <el-dialog v-model="pendingVisible" title="闲鱼待处理订单" width="min(1180px, calc(100vw - 48px))">
+      <div class="pending-filter-bar">
+        <div class="pending-filter-field pending-order-filter">
+          <span class="pending-filter-label">闲鱼订单号</span>
+          <el-input
+            v-model="pendingOrderNos"
+            clearable
+            placeholder="支持多个订单号，用逗号、空格或换行分隔"
+            @keyup.enter="loadPendingOrders"
+          />
+        </div>
+        <div class="pending-filter-field pending-date-filter">
+          <span class="pending-filter-label">下单时间</span>
+          <el-date-picker
+            v-model="pendingDateRange"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            clearable
+            @change="loadPendingOrders"
+          />
+        </div>
+        <div class="pending-filter-actions">
+          <el-button type="primary" :icon="Search" @click="loadPendingOrders">查询</el-button>
+          <el-button :icon="RefreshLeft" @click="resetPendingFilters">重置</el-button>
+        </div>
+      </div>
+      <div class="pending-result-tip">共 {{ pendingOrders.length }} 条待处理订单</div>
+      <el-table v-loading="pendingLoading" :data="pendingOrders" border empty-text="暂无待处理订单">
+        <el-table-column prop="platformOrderNo" label="闲鱼订单号" min-width="190" />
+        <el-table-column label="商品" min-width="260" show-overflow-tooltip>
+          <template #default="{ row }">{{ (row.items || []).map(item => `${item.title} ×${item.quantity}`).join('；') }}</template>
+        </el-table-column>
+        <el-table-column prop="buyerName" label="买家" width="110" show-overflow-tooltip />
+        <el-table-column prop="totalAmount" label="成交金额" width="110">
+          <template #default="{ row }">{{ formatMoney(row.totalAmount) }}</template>
+        </el-table-column>
+        <el-table-column prop="orderStatus" label="闲鱼状态" width="100" />
+        <el-table-column label="下单时间" width="170">
+          <template #default="{ row }">{{ formatDateTime(row.orderedAt) }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="100" fixed="right">
+          <template #default="{ row }"><el-button type="primary" text @click="processPendingOrder(row)">处理</el-button></template>
+        </el-table-column>
+      </el-table>
+      <template #footer><el-button @click="pendingVisible = false">关闭</el-button></template>
+    </el-dialog>
+
     <el-dialog v-model="stockPickerVisible" title="选择进货商品" width="min(1380px, calc(100vw - 48px))">
       <div class="stock-picker-layout">
         <aside class="stock-picker-types">
@@ -429,13 +481,19 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Box, CollectionTag, DataLine, Delete, Edit, Goods, InfoFilled, Menu, Money, Plus, Refresh, RefreshLeft, Search, Sell, Setting, ShoppingCart, SwitchButton, Upload, User, UserFilled } from '@element-plus/icons-vue'
 import { getProductTypeTreeApi } from '@/api/product'
-import { createSaleApi, getAvailableSaleStockApi, getSaleItemsApi, getSaleSummaryApi, getSalesApi, recognizeSaleOcrApi, updateSaleApi } from '@/api/sale'
+import { createSaleApi, getAvailableSaleStockApi, getPendingGoofishOrdersApi, getSaleItemsApi, getSaleSummaryApi, getSalesApi, markGoofishOrderProcessedApi, recognizeSaleOcrApi, updateSaleApi } from '@/api/sale'
 import { getConfigsApi } from '@/api/system'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
 const sales = ref([])
+const pendingOrders = ref([])
+const pendingVisible = ref(false)
+const pendingLoading = ref(false)
+const pendingDateRange = ref([])
+const pendingOrderNos = ref('')
+const processingGoofishOrder = ref(null)
 const saleItems = ref([])
 const currentSale = ref(null)
 const availableStock = ref([])
@@ -516,7 +574,51 @@ onMounted(() => {
   loadProductTypes()
   loadExpressCompanyOptions()
   loadSales()
+  loadPendingOrders()
 })
+
+async function loadPendingOrders() {
+  pendingLoading.value = true
+  try {
+    pendingOrders.value = await getPendingGoofishOrdersApi({
+      startDate: pendingDateRange.value?.[0] || undefined,
+      endDate: pendingDateRange.value?.[1] || undefined,
+      orderNos: normalizePendingOrderNos(pendingOrderNos.value) || undefined
+    }) || []
+  }
+  finally { pendingLoading.value = false }
+}
+
+function resetPendingFilters() {
+  pendingDateRange.value = []
+  pendingOrderNos.value = ''
+  loadPendingOrders()
+}
+
+function normalizePendingOrderNos(value) {
+  return String(value || '').split(/[,，\s]+/).map(item => item.trim()).filter(Boolean).join(',')
+}
+
+async function openPendingOrders() {
+  pendingVisible.value = true
+  await loadPendingOrders()
+}
+
+function processPendingOrder(order) {
+  processingGoofishOrder.value = order
+  editingId.value = null
+  Object.assign(form, defaultForm(), {
+    platform: '闲鱼', platformOrderNo: order.platformOrderNo || '', buyerName: order.buyerName || '',
+    buyerPhone: order.buyerPhone || '', businessDate: String(order.orderedAt || '').slice(0, 10) || today(),
+    paymentStatus: 1,
+    shipmentStatus: order.orderStatus === '已发货' || order.orderStatus === '交易成功' ? 1 : 0,
+    remark: `闲鱼订单导入：${(order.items || []).map(item => `${item.title} ×${item.quantity}`).join('；')}`,
+    items: []
+  })
+  pendingVisible.value = false
+  dialogVisible.value = true
+  ElMessage.info('订单信息已回填，请选择对应的进货商品后保存出库')
+}
 
 async function loadSales() {
   loading.value = true
@@ -561,6 +663,7 @@ function handleDateRangeChange(value) {
 }
 
 function openCreate() {
+  processingGoofishOrder.value = null
   editingId.value = null
   Object.assign(form, defaultForm())
   form.expressCompany = defaultExpressCompany()
@@ -849,7 +952,7 @@ async function handleSubmit() {
       })
       ElMessage.success('销售订单已更新')
     } else {
-      await createSaleApi({
+      const createdSale = await createSaleApi({
         ...form,
         platformFeeRate: currentPlatformFeeRate(),
         items: form.items.map((item) => ({
@@ -859,6 +962,11 @@ async function handleSubmit() {
           remark: item.remark
         }))
       })
+      if (processingGoofishOrder.value) {
+        await markGoofishOrderProcessedApi(processingGoofishOrder.value.id, createdSale.id)
+        processingGoofishOrder.value = null
+        await loadPendingOrders()
+      }
       ElMessage.success('销售订单已保存并出库')
     }
     dialogVisible.value = false

@@ -1657,6 +1657,46 @@ input {
   width: 100%;
 }
 
+.pending-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.4fr) minmax(340px, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  border: 1px solid #e5eaf2;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.pending-filter-field {
+  min-width: 0;
+}
+
+.pending-filter-label {
+  display: block;
+  margin-bottom: 7px;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pending-date-filter .el-date-editor,
+.pending-order-filter .el-input {
+  width: 100%;
+}
+
+.pending-filter-actions {
+  display: flex;
+  white-space: nowrap;
+}
+
+.pending-result-tip {
+  margin: 0 0 10px 2px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
 @media (max-width: 900px) {
   .login-page {
     grid-template-columns: 1fr;
@@ -1810,5 +1850,14 @@ input {
 
   .form-grid {
     grid-template-columns: 1fr;
+  }
+
+  .pending-filter-bar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .pending-filter-actions {
+    justify-content: flex-end;
   }
 }
